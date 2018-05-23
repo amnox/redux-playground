@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Todos App</title>
+
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+        <script src="https://unpkg.com/react@16.3.0-alpha.1/umd/react.development.js"></script>
+        <script src="https://unpkg.com/react-dom@16.3.0-alpha.1/umd/react-dom.development.js"></script>
+        <script src="https://unpkg.com/babel-standalone@6.15.0/babel.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/redux/3.7.2/redux.min.js"></script>
+        <script src="https://tylermcginnis.com/goals-todos-api/index.js"></script>
+        <script type="text/javascript">
+            const ADD_TODO = 'ADD_TODO';
+            const REMOVE_TODO = 'REMOVE_TODO';
+            const TOGGLE_TODO = 'TOGGLE_TODO';
+            const ADD_GOAL = 'ADD_GOAL';
+            const REMOVE_GOAL = 'REMOVE_GOAL';
+            const RECEIVE_DATA = 'RECEIVE_DATA';
+
+            function addTodoAction(todo) {
+                return {
+                    type: ADD_TODO,
+                    todo,
+                }
+            }
+
+            function removeTodoAction(id) {
+                return {
+                    type: REMOVE_TODO,
+                    id,
+                }
+            }
+
+            function toggleTodoAction(id) {
+                return {
+                    type: TOGGLE_TODO,
+                    id,
+                }
+            }
+
+            function addGoalAction(goal) {
+                return {
+                    type: ADD_GOAL,
+                    goal,
+                }
+            }
+
+            function removeGoalAction(id) {
+                return {
+                    type: REMOVE_GOAL,
+                    id,
+                }
+            }
+
+            function receiveDataAction (todos, goals) {
+                return {
+                    type: RECEIVE_DATA,
+                    todos,
+                    goals
+                }
+            }
+
+            //The reducer function - Passed as an arugument while initializing the store
+            function todos(state = [], action){
+                switch(action.type) {
+                    case 'ADD_TODO':
+                    return state.concat([action.todo]);
+                    case 'REMOVE_TODO':
+                        return state.filter((todo) => todo.id !== action.id);
+                    case 'TOGGLE_TODO':
+                        return state.map((todo) => todo.id !== action.id ? todo : 
+                            Object.assign({},todo,  { complete: !todo.complete }));
+                    case 'RECEIVE_DATA' :
+                        return action.todos;
+                    default:
+                        return state;
+                }
+
+            }
+
+            function loading(state = true, action) {
+                switch(action.type) {
+                    case RECEIVE_DATA:
+                        return false
+                    default:
+                        return state;
+                }
+            }
+
+            function goals(state = [], action){
+                switch(action.type) {
+                    case 'ADD_GOAL':
+                        return state.concat([action.goal]);
+                    case 'REMOVE_GOAL':
+                        return state.filter((goal) => goal.id !== action.id);
+                    case 'RECEIVE_DATA' :
+                        return action.goals;
+                    default :
+                        return state;
+                }
+            }
+
+
+            function checker(store) {
+                return function (next) {
+                    return function (action) {
+                        if (
+                            action.type === ADD_TODO &&
+                            action.todo.name.toLowerCase().includes('bitcoin')
+                        ) {
+                            return alert( "Bad Invetment!" );
+                        }
+
+                        if (
+                            action.type === ADD_GOAL &&
+                            action.goal.name.toLowerCase().includes('bitcoin')
+                        ) {
+                            return alert( "Bad Invetment!" );
+                        }
+
+                        return next(action)
+                    }
+                }
+            }
+            const logger = (store) => (next) => (action) => {
+                
+            }
+            const store = Redux.createStore(Redux.combineReducers({
+                    todos,
+                    goals,
+                    loading,
+            }), Redux.applyMiddleware(checker));
+        </script>
+    </head>
+    <body>
+        <div>
+            <h1>Todo List</h1>
+            <input id="todo" type="text"/>
+            <button id="todoBtn">Add Todo</button>
+            <ul id="todos">
+
+            </ul>
+        </div>
+        <div>
+            <h1>Goals List</h1>
+            <input id="goal" type="text"/>
+            <button id="goalBtn">Add Goal</button>
+            <ul id="goals">
+
+            </ul>
+        </div>
+        
+        <hr/>
+
+        <div id = "app"></div>
+
+        <script type = "text/javascript">
+            $( document ).ready(function() {
+                const store = Redux.createStore(Redux.combineReducers({
+                    todos,
+                    goals,
+                }), Redux.applyMiddleware(checker));
+                const unsubscribe = store.subscribe(()=>{
+                    console.log("State Changed!");
+                })
+                
+                $( "#todoBtn" ).click(function() {
+                    todo_id = Math.ceil(Math.random()*1000);
+                    todo_text = $('#todo').val();
+                    if(todo_text===''){
+                        alert("Please Enter a ToDo");
+                        return;
+                    }
+                    //alert("Updated");
+                    store.dispatch({
+                        type:ADD_TODO,
+                        todo: {
+                            id: todo_id,
+                            name: todo_text,
+                            complete: false
+                        }
+                    })
+
+                    $( "#todos" ).empty();
+                    const map1 = store.getState().todos.map((x) => {
+                        todo_item = $( "#todos" )
+                        var $li = $('<li key="'+x.id+'"></li>');
+                        var $span = $('<span>'+x.name+'</span>');
+                        var $button = $('<button>X</button>');
+                        todo_item.append($li);
+                        $li.append($span);
+                        $li.append($button);
+                        if (x.complete){
+                            $li.css("text-decoration", "line-through");
+                        }
+                        
+                        $span.click(()=>{
+                            store.dispatch(toggleTodoAction(x.id));
+                            x.complete = !x.complete
+                            x.complete ? $li.css("text-decoration", "line-through") : $li.css("text-decoration", "none")
+                        });
+
+                        $button.click(()=>{
+                            store.dispatch(removeTodoAction(x.id));
+                            $li.detach()
+                        })
+
+                    });
+                });
+                $( "#goalBtn" ).click(function() {
+                    goal_id = Math.ceil(Math.random()*1000);
+                    goal_text = $('#goal').val();
+                    if(goal_text===''){
+                        alert("Please Enter a goal");
+                        return;
+                    }
+                    //alert("Updated");
+                    store.dispatch({
+                        type:ADD_GOAL,
+                        goal: {
+                            id: goal_id,
+                            name: goal_text,
+                            complete: false
+                        }
+                    })
+
+                    $( "#goals" ).empty();
+                    const map1 = store.getState().goals.map((x) => {
+                        goal_item = $( "#goals" )
+                        var $li = $('<li key="'+x.id+'"></li>');
+                        var $span = $('<span>'+x.name+'</span>');
+                        var $button = $('<button>X</button>');
+                        $li.append($span);
+                        $li.append($button);
+                        goal_item.append($li);
+                        $button.click(()=>{
+                            store.dispatch(removeGoalAction(x.id));
+                            $li.detach()
+                        })
+                    });
+                });
+                
+                
+            });
+            
+        </script>
+
+        <script type = "text/babel">
+            
+
+            class List extends React.Component {
+                
+                removeItem = (item) => {
+                    console.log(item);
+                    if (this.props.type==="goals"){
+                        store.dispatch(removeGoalAction(item.id));
+                    } else if(this.props.type==="todos"){
+                        store.dispatch(removeTodoAction(item.id));
+                    }
+                }
+
+                flipStatus = (item) => {
+                    if(this.props.type==="todos"){
+                        store.dispatch(toggleTodoAction(item.id));
+                    }
+                }
+
+                render(){
+                    return (
+                        <ul>
+                            {this.props.items.map((item) => (
+                                <li key={item.id} >
+                                    <span style={{textDecoration:item.complete? 'line-through':'none'}} onClick = {() => this.flipStatus(item)}>{item.name}</span>
+                                    <button onClick={() => this.removeItem(item)}>X</button>
+                                </li>
+                            ))}
+                        </ul>
+                    )
+                }
+                
+                
+                
+            }
+
+            function generateId(){
+                return Math.ceil(Math.random()*1000);
+            }
+
+            class Todos extends React.Component {
+                addItem = (e) => {
+                    e.preventDefault();
+                    const name = this.input.value;
+                    this.input.value = '';
+                    this.props.store.dispatch({
+                        type:ADD_TODO,
+                        todo: {
+                            id: generateId(),
+                            name: name,
+                            complete: false
+                        }
+                    })
+                }
+                render() {
+                    return (
+                        <div>
+                            <h1>Todo List</h1>
+                            <input 
+                                type="text"
+                                ref = {(input) => this.input = input}
+                            />
+                            <button onClick = {this.addItem}>Add Todo</button>
+                            <List items = { this.props.todos } type = "todos" store = {this.props.store} />
+                        </div>
+                    )
+                }
+            }
+
+            class Goals extends React.Component {
+                addItem = (e) => {
+                    e.preventDefault();
+                    const name = this.input.value;
+                    this.input.value = '';
+                    this.props.store.dispatch({
+                        type:ADD_GOAL,
+                        goal: {
+                            id: generateId(),
+                            name: name,
+                            complete: false
+                        }
+                    })
+                }
+                render() {
+                    return (
+                        <div>
+                            <h1>Goal List</h1>
+                            <input 
+                                type="text"
+                                ref = {(input) => this.input = input}
+                            />
+                            <button onClick = {this.addItem}>Add Goal</button>
+                            <List items = { this.props.goals } type = "goals" store = {this.props.store} />
+                        </div>
+                    )
+                }
+            }
+
+            class App extends React.Component {
+                componentDidMount () {
+                    const { store } = this.props;
+                    const { todos, goals } = store.getState()
+                    store.subscribe(() => {
+                        console.log("New State is");
+                        console.log(store.getState());
+                        this.forceUpdate();
+                    })
+
+                    Promise.all([
+                        API.fetchTodos(),
+                        API.fetchGoals()
+                    ]).then(([ todos, goals ])=>{
+                        console.log(goals)
+                        store.dispatch(receiveDataAction(todos,goals));
+                    })
+                }
+                render () {
+                    const { store } = this.props;
+                    const { todos, goals, loading } = store.getState()
+
+                    if (loading === true) {
+                        return <h3>Loading...</h3>
+                    }
+                    return(
+                        <div>
+                            <Todos todos = {todos} store = {this.props.store} />
+                            <Goals goals = {goals} store = {this.props.store}/>
+                        </div>
+                    )
+                }
+            }
+
+            ReactDOM.render(
+                <App store = {store}/>,
+                document.getElementById('app')
+            )
+        </script>
+        
+    </body>
+</html>
